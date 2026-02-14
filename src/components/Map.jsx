@@ -3,14 +3,14 @@ import { Map, Marker } from 'react-map-gl';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHandPaper, faHeart, faTruckMedical, faFireFlameCurved, faPersonCircleExclamation, faHouseFloodWater, faLocationArrow, faLocationCrosshairs } from '@fortawesome/free-solid-svg-icons';
+import { faHandPaper, faHeart, faTruckMedical, faFireFlameCurved, faPersonCircleExclamation, faHouseFloodWater, faLocationArrow, faLocationCrosshairs, faUser } from '@fortawesome/free-solid-svg-icons';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../config/firebase';
 import { CEBU_CITY_CENTER } from '../config/mapbox';
 import lottie from 'lottie-web';
 import embrazeLogoData from '../assets/embraze-logo.json';
 
-const MapView = ({ onMarkerClick, flyToLocation, route, userLocation }) => {
+const MapView = ({ onMarkerClick, flyToLocation, route, userLocation, currentUser }) => {
   const [alerts, setAlerts] = useState({});
   const [error, setError] = useState(null);
   const [locating, setLocating] = useState(false);
@@ -465,6 +465,7 @@ const MapView = ({ onMarkerClick, flyToLocation, route, userLocation }) => {
             </Marker>
           );
         })}
+
       </Map>
     </div>
   );

@@ -5,6 +5,7 @@ import { database } from '../config/firebase';
  * Log an activity to Firebase history
  * @param {string} action - Type of action (request_created, request_claimed, request_fulfilled, request_cancelled)
  * @param {object} data - Activity data
+ * @returns {string|null} The key of the created log entry, or null if failed
  */
 export const logActivity = async (action, data) => {
   try {
@@ -19,7 +20,9 @@ export const logActivity = async (action, data) => {
     
     await set(newLogRef, logEntry);
     console.log('Activity logged:', action);
+    return newLogRef.key;
   } catch (error) {
     console.error('Error logging activity:', error);
+    return null;
   }
 };

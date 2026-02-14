@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHistory, faHandsHelping, faHeart, faCheckCircle, faTimesCircle, faClock, faArrowUp } from '@fortawesome/free-solid-svg-icons';
+import { faHistory, faHandsHelping, faHeart, faCheckCircle, faTimesCircle, faClock, faArrowUp, faMapMarkerAlt } from '@fortawesome/free-solid-svg-icons';
 import { ref, onValue, query, orderByChild, limitToLast } from 'firebase/database';
 import { database } from '../../config/firebase';
 
@@ -182,8 +182,9 @@ const HistoryTab = () => {
                   </p>
                   
                   {entry.location && (
-                    <p className="text-xs text-gray-500 mt-1 truncate">
-                      📍 {entry.location}
+                    <p className="text-xs text-gray-500 mt-1 truncate flex items-center gap-1">
+                      <FontAwesomeIcon icon={faMapMarkerAlt} size="xs" />
+                      {entry.location}
                     </p>
                   )}
                   

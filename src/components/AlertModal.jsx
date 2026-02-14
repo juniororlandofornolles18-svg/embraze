@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faMapMarkerAlt, faPhone, faHandHoldingHeart, faCheck, faArrowUp, faInfoCircle, faTruckMedical, faFireFlameCurved, faPersonCircleExclamation, faHouseFloodWater, faExclamationCircle, faRoute } from '@fortawesome/free-solid-svg-icons';
+import { faTimes, faMapMarkerAlt, faPhone, faHandHoldingHeart, faCheck, faArrowUp, faInfoCircle, faTruckMedical, faFireFlameCurved, faPersonCircleExclamation, faHouseFloodWater, faExclamationCircle, faRoute, faUtensils, faDroplet, faBed, faPills, faShirt } from '@fortawesome/free-solid-svg-icons';
 import { ref, update } from 'firebase/database';
 import { database } from '../config/firebase';
 import { logActivity } from '../utils/activityLogger';
@@ -10,9 +10,7 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn, cur
   const [isExpanded, setIsExpanded] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [showDescriptionModal, setShowDescriptionModal] = useState(false);
-  const [claiming, setClaiming] = useState(false);
-  const [showClaimModal, setShowClaimModal] = useState(false);
-  const [donorInfo, setDonorInfo] = useState({ name: '', contact: '' });
+  const [showNeedsModal, setShowNeedsModal] = useState(false);
   const [boosting, setBoosting] = useState(false);
   const [userBoostId, setUserBoostId] = useState(null);
   
@@ -110,53 +108,6 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn, cur
     }
   };
 
-  const handleClaimClick = (e) => {
-    e.stopPropagation();
-    if (alert.claimed) {
-      alert('This request has already been claimed.');
-      return;
-    }
-    setShowClaimModal(true);
-  };
-
-  const handleClaimSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!donorInfo.name.trim()) {
-      alert('Please enter your name');
-      return;
-    }
-
-    setClaiming(true);
-    try {
-      const alertRef = ref(database, `alerts/${alert.id}`);
-      await update(alertRef, {
-        claimed: true,
-        claimedBy: donorInfo.name.trim(),
-        claimedByContact: donorInfo.contact.trim() || 'Not provided',
-        claimedAt: Date.now()
-      });
-      
-      // Log activity
-      await logActivity('request_claimed', {
-        alertId: alert.id,
-        donorName: donorInfo.name.trim(),
-        requestType: alert.type,
-        location: alert.address
-      });
-      
-      alert(`You've claimed this donation request! The requester will be notified.`);
-      setShowClaimModal(false);
-      setDonorInfo({ name: '', contact: '' });
-      onClose();
-    } catch (error) {
-      console.error('Error claiming request:', error);
-      alert('Failed to claim request. Please try again.');
-    } finally {
-      setClaiming(false);
-    }
-  };
-
   return (
     <>
       <motion.div
@@ -170,7 +121,8 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn, cur
         onMouseEnter={() => setIsExpanded(true)}
         onMouseLeave={() => setIsExpanded(false)}
         onTouchStart={() => setIsExpanded(true)}
-        className="fixed z-50 left-4 top-1/2 -translate-y-1/2 md:left-1/4 md:-translate-x-1/2"
+        className="fixed z-50 left-4 md:left-1/4 md:-translate-x-1/2"
+        style={{ top: '40%', transform: 'translateY(-50%)' }}
       >
       <div className={`bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden transition-all duration-300 max-w-[90vw] sm:max-w-md`}>
         {/* Collapsed Pill */}
@@ -219,7 +171,7 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn, cur
         >
           <div className={`px-4 pb-3 space-y-2 border-t border-gray-100`}>
             <p className="text-xs text-gray-500 uppercase font-medium pt-2">
-              {alert.type === 'donation' ? 'Donation Request' : alert.type}
+              {alert.type === 'donation' ? 'Donation Request' : alert.type.charAt(0).toUpperCase() + alert.type.slice(1)}
             </p>
 
             {alert.contact && alert.contact !== 'Not provided' && (
@@ -247,7 +199,8 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn, cur
               </div>
             </div>
 
-            {alert.description && alert.description !== `Quick ${alert.type} alert` && (
+            {/* Description for emergency alerts */}
+            {isEmergency && alert.description && alert.description !== `Quick ${alert.type} alert` && (
               <div className="flex items-start gap-2 text-xs text-gray-700">
                 {/* Icon based on alert type */}
                 {alert.type === 'medical' && <FontAwesomeIcon icon={faTruckMedical} className="text-red-500 mt-0.5" size="sm" />}
@@ -273,23 +226,34 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn, cur
               </div>
             )}
 
+            {/* Additional notes for donation requests */}
+            {isDonation && alert.description && alert.description !== 'General donation request' && (
+              <div className="pl-5">
+                <p className="text-xs font-medium text-gray-500 mb-1">Additional Notes:</p>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDescriptionModal(true);
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  see more
+                </button>
+              </div>
+            )}
+
             {alert.needs && (
               <div className="pl-5">
                 <p className="text-xs font-medium text-gray-500 mb-1">Needs:</p>
-                <div className="flex flex-wrap gap-1">
-                  {Object.entries(alert.needs).map(([need, value]) => 
-                    value && (
-                      <span key={need} className={`text-xs ${badgeBg} ${textColor} px-2 py-0.5 rounded-full font-medium`}>
-                        {need === 'food' && '🍚'}
-                        {need === 'water' && '💧'}
-                        {need === 'blankets' && '🛏️'}
-                        {need === 'medicine' && '💊'}
-                        {need === 'clothing' && '👕'}
-                        {' '}{need}
-                      </span>
-                    )
-                  )}
-                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowNeedsModal(true);
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  see more
+                </button>
               </div>
             )}
 
@@ -332,34 +296,13 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn, cur
                 </div>
               )}
 
-              {/* Claim Button for Donations - Only for authenticated users */}
+              {/* Action Buttons - For Donations */}
               {isLoggedIn && isDonation && !isOwnAlert && (
-                <>
-                  {alert.claimed ? (
-                    <div className="text-xs">
-                      <p className="text-green-600 font-medium mb-1 flex items-center gap-1">
-                        <FontAwesomeIcon icon={faCheck} />
-                        Claimed by {alert.claimedBy}
-                      </p>
-                      {alert.claimedByContact && alert.claimedByContact !== 'Not provided' && (
-                        <p className="text-gray-600">Contact: {alert.claimedByContact}</p>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleClaimClick}
-                      disabled={claiming}
-                      className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white py-2 rounded-lg font-medium text-xs transition-colors flex items-center justify-center gap-2"
-                    >
-                      <FontAwesomeIcon icon={faHandHoldingHeart} />
-                      {claiming ? 'Claiming...' : 'I Can Help - Claim This'}
-                    </button>
-                  )}
-                  
+                <div className="space-y-2">
                   {/* Boost Button */}
                   <button
                     onClick={handleBoost}
-                    disabled={boosting || alert.claimed}
+                    disabled={boosting}
                     className={`w-full py-2 rounded-lg font-medium text-xs transition-colors flex items-center justify-center gap-2 ${
                       hasUserBoosted
                         ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
@@ -372,7 +315,7 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn, cur
                       <span className="ml-1 font-bold">({alert.boosts})</span>
                     )}
                   </button>
-                </>
+                </div>
               )}
             </div>
           </div>
@@ -438,101 +381,6 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn, cur
         )}
       </AnimatePresence>
 
-      {/* Claim Modal */}
-      <AnimatePresence>
-        {showClaimModal && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => !claiming && setShowClaimModal(false)}
-              className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center"
-            >
-              {/* Modal */}
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-xl shadow-2xl p-5 max-w-sm mx-4 w-full"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <FontAwesomeIcon icon={faHandHoldingHeart} className="text-blue-500 text-sm" />
-                    <h3 className="font-semibold text-gray-900 text-sm">Claim Request</h3>
-                  </div>
-                  <button
-                    onClick={() => !claiming && setShowClaimModal(false)}
-                    disabled={claiming}
-                    className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors disabled:opacity-50"
-                  >
-                    <FontAwesomeIcon icon={faTimes} className="text-gray-400 text-xs" />
-                  </button>
-                </div>
-
-                <form onSubmit={handleClaimSubmit} className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Your Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={donorInfo.name}
-                      onChange={(e) => setDonorInfo({ ...donorInfo, name: e.target.value })}
-                      placeholder="Enter your name"
-                      disabled={claiming}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Contact <span className="text-gray-400 text-xs">(optional)</span>
-                    </label>
-                    <input
-                      type="tel"
-                      value={donorInfo.contact}
-                      onChange={(e) => setDonorInfo({ ...donorInfo, contact: e.target.value })}
-                      placeholder="+63 912 345 6789"
-                      disabled={claiming}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                    />
-                  </div>
-
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setShowClaimModal(false)}
-                      disabled={claiming}
-                      className="flex-1 px-3 py-2 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={claiming}
-                      className="flex-1 px-3 py-2 text-xs font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:bg-gray-400 flex items-center justify-center gap-1.5"
-                    >
-                      {claiming ? (
-                        <>Claiming...</>
-                      ) : (
-                        <>
-                          <FontAwesomeIcon icon={faHandHoldingHeart} size="xs" />
-                          Claim
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </motion.div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
       {/* Description Modal */}
       <AnimatePresence>
         {showDescriptionModal && (
@@ -556,7 +404,9 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn, cur
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <FontAwesomeIcon icon={faInfoCircle} className="text-blue-500" />
-                    <h3 className="font-semibold text-gray-900">Emergency Details</h3>
+                    <h3 className="font-semibold text-gray-900">
+                      {isDonation ? 'Additional Notes' : 'Emergency Details'}
+                    </h3>
                   </div>
                   <button
                     onClick={() => setShowDescriptionModal(false)}
@@ -566,16 +416,64 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn, cur
                   </button>
                 </div>
                 <div className="flex items-start gap-2">
-                  {/* Icon based on alert type - before the description */}
-                  {alert.type === 'medical' && <FontAwesomeIcon icon={faTruckMedical} className="text-red-500 mt-1" />}
-                  {alert.type === 'fire' && <FontAwesomeIcon icon={faFireFlameCurved} className="text-orange-500 mt-1" />}
-                  {alert.type === 'rescue' && <FontAwesomeIcon icon={faPersonCircleExclamation} className="text-yellow-500 mt-1" />}
-                  {alert.type === 'flood' && <FontAwesomeIcon icon={faHouseFloodWater} className="text-blue-500 mt-1" />}
-                  {(alert.type === 'emergency' || !['medical', 'fire', 'rescue', 'flood'].includes(alert.type)) && <FontAwesomeIcon icon={faExclamationCircle} className="text-red-500 mt-1" />}
+                  {/* Icon based on alert type - only for emergency alerts */}
+                  {isEmergency && (
+                    <>
+                      {alert.type === 'medical' && <FontAwesomeIcon icon={faTruckMedical} className="text-red-500 mt-1" />}
+                      {alert.type === 'fire' && <FontAwesomeIcon icon={faFireFlameCurved} className="text-orange-500 mt-1" />}
+                      {alert.type === 'rescue' && <FontAwesomeIcon icon={faPersonCircleExclamation} className="text-yellow-500 mt-1" />}
+                      {alert.type === 'flood' && <FontAwesomeIcon icon={faHouseFloodWater} className="text-blue-500 mt-1" />}
+                      {(alert.type === 'emergency' || !['medical', 'fire', 'rescue', 'flood'].includes(alert.type)) && <FontAwesomeIcon icon={faExclamationCircle} className="text-red-500 mt-1" />}
+                    </>
+                  )}
                   
                   <p className="text-sm text-gray-700 leading-relaxed flex-1">
                     {descriptionText}
                   </p>
+                </div>
+              </motion.div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Needs Modal */}
+      <AnimatePresence>
+        {showNeedsModal && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowNeedsModal(false)}
+              className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center"
+            >
+              {/* Modal */}
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-2xl shadow-2xl p-6 max-w-md mx-4"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900">Needs:</h3>
+                  <button
+                    onClick={() => setShowNeedsModal(false)}
+                    className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
+                  >
+                    <FontAwesomeIcon icon={faTimes} className="text-gray-400" />
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(alert.needs)
+                    .filter(([need, value]) => value)
+                    .map(([need, value]) => (
+                      <span key={need} className={`text-sm ${badgeBg} ${textColor} px-3 py-1.5 rounded-full font-medium`}>
+                        {need.charAt(0).toUpperCase() + need.slice(1)}
+                      </span>
+                    ))}
                 </div>
               </motion.div>
             </motion.div>

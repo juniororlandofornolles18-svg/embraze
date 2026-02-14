@@ -14,6 +14,8 @@ const AlertsPanel = ({ onAlertClick, onLogout, onLogin, isLoggedIn, onExpandChan
   const [showHistory, setShowHistory] = useState(false);
   const [hasUnreadAlerts, setHasUnreadAlerts] = useState(false);
   const [expandedAddresses, setExpandedAddresses] = useState({});
+  const [expandedNeeds, setExpandedNeeds] = useState({});
+  const [expandedDescriptions, setExpandedDescriptions] = useState({});
 
   // Notify parent when expansion state changes
   useEffect(() => {
@@ -230,7 +232,7 @@ const AlertsPanel = ({ onAlertClick, onLogout, onLogin, isLoggedIn, onExpandChan
                                     {alert.name || 'Anonymous'}
                                   </p>
                                   <span className="text-xs font-medium text-blue-600">
-                                    {alert.type === 'donation' ? 'Donation' : alert.type}
+                                    {alert.type === 'donation' ? 'Donation' : alert.type.charAt(0).toUpperCase() + alert.type.slice(1)}
                                   </span>
                                 </div>
                               </div>
@@ -268,33 +270,35 @@ const AlertsPanel = ({ onAlertClick, onLogout, onLogin, isLoggedIn, onExpandChan
           <div className="flex flex-col gap-3">
             {/* Only show alerts button for authenticated users */}
             {isLoggedIn && (
-              <button
-                onClick={() => {
-                  if (showSettings || showHistory) {
-                    setShowSettings(false);
-                    setShowHistory(false);
-                    setIsExpanded(true);
-                    setHasUnreadAlerts(false);
-                  } else {
-                    setIsExpanded(!isExpanded);
-                    if (!isExpanded) {
+              <>
+                <button
+                  onClick={() => {
+                    if (showSettings || showHistory) {
+                      setShowSettings(false);
+                      setShowHistory(false);
+                      setIsExpanded(true);
                       setHasUnreadAlerts(false);
+                    } else {
+                      setIsExpanded(!isExpanded);
+                      if (!isExpanded) {
+                        setHasUnreadAlerts(false);
+                      }
                     }
-                  }
-                }}
-                className={`relative w-12 h-12 rounded-xl flex items-center justify-center shadow-lg transition-all ${
-                  isExpanded && !showSettings && !showHistory
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <FontAwesomeIcon icon={faBell} size="lg" />
-                {hasUnreadAlerts && alertsArray.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                    {alertsArray.length}
-                  </span>
-                )}
-              </button>
+                  }}
+                  className={`relative w-12 h-12 rounded-xl flex items-center justify-center shadow-lg transition-all ${
+                    isExpanded && !showSettings && !showHistory
+                      ? 'bg-blue-500 text-white' 
+                      : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <FontAwesomeIcon icon={faBell} size="lg" />
+                  {hasUnreadAlerts && alertsArray.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                      {alertsArray.length}
+                    </span>
+                  )}
+                </button>
+              </>
             )}
 
             {/* History Button */}
@@ -337,6 +341,7 @@ const AlertsPanel = ({ onAlertClick, onLogout, onLogin, isLoggedIn, onExpandChan
                 setIsExpanded(true);
                 setShowSettings(true);
                 setShowHistory(false);
+                setShowFamily(false);
               }}
               className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden hover:ring-2 hover:ring-blue-500 transition-all"
             >
@@ -449,15 +454,9 @@ const AlertsPanel = ({ onAlertClick, onLogout, onLogin, isLoggedIn, onExpandChan
                                   <span className={`text-xs font-medium ${
                                     alert.type === 'donation' ? 'text-blue-600' : 'text-red-600'
                                   }`}>
-                                    {alert.type === 'donation' ? 'Donation Request' : alert.type}
+                                    {alert.type === 'donation' ? 'Donation Request' : alert.type.charAt(0).toUpperCase() + alert.type.slice(1)}
                                   </span>
-                                  {alert.type === 'donation' && alert.claimed && (
-                                    <span className="text-xs text-green-600 font-medium flex items-center gap-1">
-                                      <FontAwesomeIcon icon={faCheck} size="xs" />
-                                      Claimed
-                                    </span>
-                                  )}
-                                  {alert.type === 'donation' && !alert.claimed && alert.boosts > 0 && (
+                                  {alert.type === 'donation' && alert.boosts > 0 && (
                                     <span className="text-xs text-orange-600 font-medium flex items-center gap-1">
                                       <FontAwesomeIcon icon={faArrowUp} size="xs" />
                                       {alert.boosts} {alert.boosts === 1 ? 'boost' : 'boosts'}
@@ -495,25 +494,72 @@ const AlertsPanel = ({ onAlertClick, onLogout, onLogin, isLoggedIn, onExpandChan
                             </div>
                           </div>
 
-                          {alert.description && alert.description !== `Quick ${alert.type} alert` && (
-                            <p className="text-xs text-gray-700 mb-2 line-clamp-2">
-                              {alert.description}
-                            </p>
+                          {alert.description && alert.description !== `Quick ${alert.type} alert` && alert.description !== 'General donation request' && (
+                            <div className="text-xs text-gray-700 mb-2">
+                              <span className="font-medium text-gray-500">Note: </span>
+                              {alert.description.length <= 50 ? (
+                                <span>{alert.description}</span>
+                              ) : (
+                                <>
+                                  {!expandedDescriptions[alert.id] && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setExpandedDescriptions(prev => ({
+                                          ...prev,
+                                          [alert.id]: true
+                                        }));
+                                      }}
+                                      className="text-blue-600 hover:text-blue-700 font-medium"
+                                    >
+                                      see more
+                                    </button>
+                                  )}
+                                  {expandedDescriptions[alert.id] && (
+                                    <>
+                                      <span>{alert.description}</span>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setExpandedDescriptions(prev => ({
+                                            ...prev,
+                                            [alert.id]: false
+                                          }));
+                                        }}
+                                        className="text-blue-600 hover:text-blue-700 font-medium ml-1"
+                                      >
+                                        see less
+                                      </button>
+                                    </>
+                                  )}
+                                </>
+                              )}
+                            </div>
                           )}
 
                           {alert.needs && (
                             <div className="flex flex-wrap gap-1">
-                              {Object.entries(alert.needs).map(([need, value]) => 
-                                value && (
+                              {Object.entries(alert.needs)
+                                .filter(([need, value]) => value)
+                                .slice(0, expandedNeeds[alert.id] ? undefined : 3)
+                                .map(([need, value]) => (
                                   <span key={need} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
-                                    {need === 'food' && '🍚'}
-                                    {need === 'water' && '💧'}
-                                    {need === 'blankets' && '🛏️'}
-                                    {need === 'medicine' && '💊'}
-                                    {need === 'clothing' && '👕'}
-                                    {' '}{need}
+                                    {need.charAt(0).toUpperCase() + need.slice(1)}
                                   </span>
-                                )
+                                ))}
+                              {Object.entries(alert.needs).filter(([need, value]) => value).length > 3 && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedNeeds(prev => ({
+                                      ...prev,
+                                      [alert.id]: !prev[alert.id]
+                                    }));
+                                  }}
+                                  className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1"
+                                >
+                                  {expandedNeeds[alert.id] ? 'see less' : 'see more'}
+                                </button>
                               )}
                             </div>
                           )}

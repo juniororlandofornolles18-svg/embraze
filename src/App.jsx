@@ -24,8 +24,21 @@ function App() {
   const [navigationDestination, setNavigationDestination] = useState(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isPanelExpanded, setIsPanelExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const handleAlertClick = (alert) => {
+    setSelectedAlert(alert);
+    setFlyToLocation({ longitude: alert.longitude, latitude: alert.latitude });
+  };
+
+  // Close AlertModal when drawer opens on mobile
+  useEffect(() => {
+    if (isMobile && isPanelExpanded && selectedAlert) {
+      setSelectedAlert(null);
+    }
+  }, [isMobile, isPanelExpanded, selectedAlert]);
 
   // Track window resize for mobile detection
   useEffect(() => {
@@ -122,7 +135,13 @@ function App() {
           });
         },
         (error) => {
-          console.error('Error getting location:', error);
+          // Silently handle error - location is optional
+          console.log('Location not available:', error.code);
+        },
+        {
+          enableHighAccuracy: false,
+          maximumAge: 30000,
+          timeout: 10000
         }
       );
 
@@ -135,23 +154,21 @@ function App() {
           });
         },
         (error) => {
-          console.error('Error watching location:', error);
+          // Silently handle error - location is optional
+          if (error.code !== 3) { // Only log non-timeout errors
+            console.log('Location watch error:', error.code);
+          }
         },
         {
-          enableHighAccuracy: true,
-          maximumAge: 10000,
-          timeout: 5000
+          enableHighAccuracy: false,
+          maximumAge: 30000,
+          timeout: 15000
         }
       );
 
       return () => navigator.geolocation.clearWatch(watchId);
     }
   }, []);
-
-  const handleAlertClick = (alert) => {
-    setSelectedAlert(alert);
-    setFlyToLocation({ longitude: alert.longitude, latitude: alert.latitude });
-  };
 
   const handleGetDirections = async (alertData) => {
     if (!userLocation) {
@@ -209,6 +226,7 @@ function App() {
               flyToLocation={flyToLocation}
               route={navigationRoute}
               userLocation={navigationRoute ? userLocation : null}
+              currentUser={currentUser}
             />
           </div>
 
@@ -223,6 +241,7 @@ function App() {
             isLoggedIn={isLoggedIn}
             currentUser={currentUser}
             onExpandChange={(expanded) => {
+              setIsPanelExpanded(expanded);
               // Track panel expansion state for responsive layout
               document.documentElement.style.setProperty('--panel-expanded', expanded ? '1' : '0');
             }}

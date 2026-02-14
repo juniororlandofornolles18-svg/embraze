@@ -13,9 +13,8 @@ const EmergencyButton = ({ currentUser }) => {
   const [showRadialMenu, setShowRadialMenu] = useState(false);
   const [currentAlertId, setCurrentAlertId] = useState(null);
   const [currentAlertType, setCurrentAlertType] = useState(null);
+  const [hoveredButton, setHoveredButton] = useState(null);
   const [details, setDetails] = useState({
-    name: '',
-    contact: '',
     description: '',
     needs: {
       food: false,
@@ -41,38 +40,6 @@ const EmergencyButton = ({ currentUser }) => {
           const latitude = position.coords.latitude;
           const longitude = position.coords.longitude;
           
-          // Reverse geocode to get address
-          let address = 'Location on map';
-          try {
-            const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
-              {
-                headers: {
-                  'User-Agent': 'Embraze Emergency App'
-                }
-              }
-            );
-            const data = await response.json();
-            
-            if (data.display_name) {
-              address = data.display_name;
-            } else if (data.address) {
-              // Build a cleaner address from components
-              const addr = data.address;
-              const parts = [
-                addr.road || addr.street,
-                addr.suburb || addr.neighbourhood,
-                addr.city || addr.town || addr.municipality,
-                addr.state,
-                addr.country
-              ].filter(Boolean);
-              address = parts.join(', ');
-            }
-          } catch (geoError) {
-            console.error('Geocoding error:', geoError);
-            // Keep default address if geocoding fails
-          }
-
           const alertRef = ref(database, 'alerts');
           const newAlertRef = push(alertRef);
           
@@ -82,7 +49,7 @@ const EmergencyButton = ({ currentUser }) => {
             email: currentUser?.email || '',
             photoURL: currentUser?.photoURL || '',
             userId: currentUser?.uid || null,
-            address: address,
+            address: 'Loading address...',
             latitude: latitude,
             longitude: longitude,
             timestamp: Date.now(),
@@ -126,23 +93,71 @@ const EmergencyButton = ({ currentUser }) => {
           
           await set(newAlertRef, alertData);
 
-          // Log activity
-          await logActivity('request_created', {
+          // Log activity with temporary address
+          const activityLogRef = await logActivity('request_created', {
             alertId: newAlertRef.key,
             userName: alertData.name,
             userPhotoURL: alertData.photoURL,
             requestType: type,
-            location: address,
+            location: 'Loading address...',
             latitude: latitude,
             longitude: longitude
           });
 
-          // Show success and optional details modal
-          setCurrentAlertId(newAlertRef.key);
-          setCurrentAlertType(type);
+          // Fetch address in background (non-blocking) and update both alert and activity log
+          fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+            {
+              headers: {
+                'User-Agent': 'Embraze Emergency App'
+              }
+            }
+          )
+            .then(response => response.json())
+            .then(data => {
+              let address = 'Location on map';
+              if (data.display_name) {
+                address = data.display_name;
+              } else if (data.address) {
+                const addr = data.address;
+                const parts = [
+                  addr.road || addr.street,
+                  addr.suburb || addr.neighbourhood,
+                  addr.city || addr.town || addr.municipality,
+                  addr.state,
+                  addr.country
+                ].filter(Boolean);
+                address = parts.join(', ');
+              }
+              // Update the alert with the real address
+              update(ref(database, `alerts/${newAlertRef.key}`), { address });
+              // Update the activity log with the real address
+              if (activityLogRef) {
+                update(ref(database, `history/${activityLogRef}`), { location: address });
+              }
+            })
+            .catch(error => {
+              console.error('Geocoding error:', error);
+              const fallbackAddress = 'Location on map';
+              // Update with fallback address
+              update(ref(database, `alerts/${newAlertRef.key}`), { address: fallbackAddress });
+              if (activityLogRef) {
+                update(ref(database, `history/${activityLogRef}`), { location: fallbackAddress });
+              }
+            });
+
+          // Only show details modal for donation requests
+          if (type === 'donation') {
+            setCurrentAlertId(newAlertRef.key);
+            setCurrentAlertType(type);
+            setShowDetailsModal(true);
+          } else {
+            // For emergency alerts, just show success message
+            alert('Emergency alert sent successfully!');
+          }
+          
           setShowMenu(false);
           setLoading(false);
-          setShowDetailsModal(true);
         }, (error) => {
           alert('Please enable location access');
           setLoading(false);
@@ -162,8 +177,6 @@ const EmergencyButton = ({ currentUser }) => {
       const alertRef = ref(database, `alerts/${currentAlertId}`);
       const updates = {};
 
-      if (details.name.trim()) updates.name = details.name.trim();
-      if (details.contact.trim()) updates.contact = details.contact.trim();
       if (details.description.trim()) updates.description = details.description.trim();
       
       // Only add needs if it's a donation request
@@ -175,8 +188,6 @@ const EmergencyButton = ({ currentUser }) => {
       
       setShowDetailsModal(false);
       setDetails({
-        name: '',
-        contact: '',
         description: '',
         needs: { food: false, water: false, medicine: false, shelter: false, transport: false }
       });
@@ -191,8 +202,6 @@ const EmergencyButton = ({ currentUser }) => {
   const handleSkipDetails = () => {
     setShowDetailsModal(false);
     setDetails({
-      name: '',
-      contact: '',
       description: '',
       needs: { food: false, water: false, medicine: false, shelter: false, transport: false }
     });
@@ -214,21 +223,50 @@ const EmergencyButton = ({ currentUser }) => {
               <div className="flex items-center gap-2">
                 {/* Radial buttons - horizontal layout */}
                 {emergencyTypes.map((emergency, index) => (
-                  <motion.button
-                    key={emergency.type}
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    onClick={() => {
-                      sendAlert(emergency.type);
-                      setShowRadialMenu(false);
-                    }}
-                    disabled={loading}
-                    className={`w-12 h-12 ${emergency.color} text-white rounded-full shadow-lg flex flex-col items-center justify-center hover:scale-110 transition-transform disabled:opacity-50`}
-                  >
-                    <FontAwesomeIcon icon={emergency.icon} size="lg" />
-                  </motion.button>
+                  <div key={emergency.type} className="relative flex flex-col items-center">
+                    {/* Tooltip */}
+                    <AnimatePresence>
+                      {hoveredButton === emergency.type && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 5 }}
+                          className="absolute bottom-full mb-2 whitespace-nowrap pointer-events-none"
+                        >
+                          <div className="bg-gray-900 text-white text-xs px-2 py-1 rounded shadow-lg">
+                            {emergency.label}
+                          </div>
+                          {/* Arrow */}
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2" style={{ marginTop: '-1px' }}>
+                            <div style={{
+                              width: 0,
+                              height: 0,
+                              borderLeft: '4px solid transparent',
+                              borderRight: '4px solid transparent',
+                              borderTop: '4px solid #111827'
+                            }} />
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    
+                    <motion.button
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      onClick={() => {
+                        sendAlert(emergency.type);
+                        setShowRadialMenu(false);
+                      }}
+                      onMouseEnter={() => setHoveredButton(emergency.type)}
+                      onMouseLeave={() => setHoveredButton(null)}
+                      disabled={loading}
+                      className={`w-12 h-12 ${emergency.color} text-white rounded-full shadow-lg flex flex-col items-center justify-center hover:scale-110 transition-transform disabled:opacity-50`}
+                    >
+                      <FontAwesomeIcon icon={emergency.icon} size="lg" />
+                    </motion.button>
+                  </div>
                 ))}
 
                 {/* Close button */}
@@ -336,32 +374,6 @@ const EmergencyButton = ({ currentUser }) => {
               </div>
 
               <div className="space-y-2.5">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Your Name
-                  </label>
-                  <input
-                    type="text"
-                    value={details.name}
-                    onChange={(e) => setDetails({ ...details, name: e.target.value })}
-                    placeholder="Enter your name"
-                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Contact Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={details.contact}
-                    onChange={(e) => setDetails({ ...details, contact: e.target.value })}
-                    placeholder="+63 912 345 6789"
-                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
                 {currentAlertType === 'donation' && (
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1.5">

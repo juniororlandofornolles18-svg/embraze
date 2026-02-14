@@ -3,12 +3,9 @@ import { ref, push, set } from 'firebase/database';
 import { database } from '../../config/firebase';
 import { FiPackage, FiDroplet, FiShoppingBag } from 'react-icons/fi';
 
-const DonationsTab = () => {
+const DonationsTab = ({ currentUser }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    contact: '',
-    address: '',
     needs: {
       food: false,
       water: false,
@@ -34,9 +31,10 @@ const DonationsTab = () => {
           needs[needType] = true;
           
           await set(newDonationRef, {
-            name: 'Anonymous',
-            contact: 'Not provided',
+            name: currentUser?.displayName || 'Anonymous',
+            contact: currentUser?.email || 'Not provided',
             address: 'Location on map',
+            userId: currentUser?.uid,
             needs: needs,
             familySize: 1,
             specificNeeds: `Quick request for ${needType}`,
@@ -80,6 +78,10 @@ const DonationsTab = () => {
           const newDonationRef = push(donationRef);
           
           await set(newDonationRef, {
+            name: currentUser?.displayName || 'Anonymous',
+            contact: currentUser?.email || 'Not provided',
+            address: 'Location on map',
+            userId: currentUser?.uid,
             ...formData,
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
@@ -90,21 +92,18 @@ const DonationsTab = () => {
 
           alert('Donation request posted successfully!');
           setFormData({
-            name: '',
-            contact: '',
-            address: '',
             needs: { food: false, water: false, blankets: false, medicine: false, clothing: false },
             familySize: 1,
             specificNeeds: '',
             urgency: 'high'
           });
           setShowDetails(false);
+          setLoading(false);
         });
       }
     } catch (error) {
       console.error('Error posting donation request:', error);
       alert('Failed to post donation request');
-    } finally {
       setLoading(false);
     }
   };
@@ -172,36 +171,6 @@ const DonationsTab = () => {
       </button>
 
       <form onSubmit={handleDetailedSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Full Name (Optional)</label>
-          <input
-            type="text"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number (Optional)</label>
-          <input
-            type="tel"
-            value={formData.contact}
-            onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Address (Optional)</label>
-          <input
-            type="text"
-            value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">What do you need?</label>
           <div className="grid grid-cols-2 gap-2">

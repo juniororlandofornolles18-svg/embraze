@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHandsHelping, faHeart, faUserCircle, faCog, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faHandsHelping, faHeart, faUserCircle, faCog, faChevronRight, faUsers } from '@fortawesome/free-solid-svg-icons';
 import HelpRequestTab from './tabs/HelpRequestTab';
 import DonationsTab from './tabs/DonationsTab';
 import SettingsTab from './tabs/SettingsTab';
 import ProfileTab from './tabs/ProfileTab';
+import FamilyCircleTab from './tabs/FamilyCircleTab';
 
-const SidePanel = ({ user }) => {
+const SidePanel = ({ user, onFlyToMember }) => {
   const [activeTab, setActiveTab] = useState('help');
   const [isExpanded, setIsExpanded] = useState(false);
 
   const tabs = [
     { id: 'help', icon: faHandsHelping, label: 'Help' },
     { id: 'donations', icon: faHeart, label: 'Donate' },
+    { id: 'family', icon: faUsers, label: 'Family' },
     { id: 'profile', icon: faUserCircle, label: 'Profile' },
     { id: 'settings', icon: faCog, label: 'Settings' },
   ];
@@ -91,7 +93,8 @@ const SidePanel = ({ user }) => {
                   className="p-6"
                 >
                   {activeTab === 'help' && <HelpRequestTab />}
-                  {activeTab === 'donations' && <DonationsTab />}
+                  {activeTab === 'donations' && <DonationsTab currentUser={user} />}
+                  {activeTab === 'family' && <FamilyCircleTab currentUser={user} onFlyToMember={onFlyToMember} />}
                   {activeTab === 'profile' && <ProfileTab user={user} />}
                   {activeTab === 'settings' && <SettingsTab />}
                 </motion.div>
