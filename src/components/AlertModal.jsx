@@ -6,7 +6,7 @@ import { ref, update } from 'firebase/database';
 import { database } from '../config/firebase';
 import { logActivity } from '../utils/activityLogger';
 
-const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn }) => {
+const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn, currentUser }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [showDescriptionModal, setShowDescriptionModal] = useState(false);
@@ -20,6 +20,7 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn }) =
 
   const isEmergency = alert.type !== 'donation';
   const isDonation = alert.type === 'donation';
+  const isOwnAlert = currentUser && alert.userId === currentUser.uid;
   const textColor = isEmergency ? 'text-red-700' : 'text-blue-700';
   const iconColor = isEmergency ? 'text-red-500' : 'text-blue-500';
   const badgeBg = isEmergency ? 'bg-red-50' : 'bg-blue-50';
@@ -159,33 +160,40 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn }) =
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ 
+          opacity: 0, 
+          x: -20,
+          transition: { duration: 0.2 }
+        }}
         onMouseEnter={() => setIsExpanded(true)}
         onMouseLeave={() => setIsExpanded(false)}
-        className="fixed z-50"
-        style={{
-          left: position?.x || '50%',
-          top: position?.y || '50%',
-          transform: 'translate(-50%, -100%)',
-          marginTop: '-16px'
-        }}
+        onTouchStart={() => setIsExpanded(true)}
+        className="fixed z-50 left-4 top-1/2 -translate-y-1/2 md:left-1/4 md:-translate-x-1/2"
       >
-      <div className={`bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden transition-all duration-300`}>
+      <div className={`bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden transition-all duration-300 max-w-[90vw] sm:max-w-md`}>
         {/* Collapsed Pill */}
-        <div className="px-4 py-2 flex items-center gap-2 min-w-[180px]">
+        <div className="px-3 sm:px-4 py-2 flex items-center gap-2 min-w-[160px] sm:min-w-[180px]">
           {/* Profile Photo */}
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-            {firstName.charAt(0).toUpperCase()}
-          </div>
+          {alert.photoURL ? (
+            <img 
+              src={alert.photoURL} 
+              alt={firstName} 
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0">
+              {firstName.charAt(0).toUpperCase()}
+            </div>
+          )}
           
           <div className="flex-1 min-w-0">
-            <p className={`font-semibold text-sm ${textColor} truncate`}>
+            <p className={`font-semibold text-xs sm:text-sm ${textColor} truncate`}>
               {firstName}
             </p>
             {isDonation && alert.claimed && (
-              <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+              <span className="text-[10px] sm:text-xs text-green-600 font-medium flex items-center gap-1">
                 <FontAwesomeIcon icon={faCheck} size="xs" />
                 Claimed
               </span>
@@ -287,8 +295,8 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn }) =
 
             {/* Action Buttons */}
             <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
-              {/* Get Directions Button - Only for authenticated users */}
-              {isLoggedIn && onGetDirections && (
+              {/* Get Directions Button - Only for authenticated users and not their own alerts */}
+              {isLoggedIn && onGetDirections && !isOwnAlert && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -299,6 +307,13 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn }) =
                   <FontAwesomeIcon icon={faRoute} />
                   Get Directions
                 </button>
+              )}
+
+              {/* Message for own alerts */}
+              {isLoggedIn && isOwnAlert && (
+                <div className="text-center py-2">
+                  <p className="text-xs text-gray-600">This is your request</p>
+                </div>
               )}
 
               {/* Sign in prompt for non-authenticated users */}
@@ -318,7 +333,7 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn }) =
               )}
 
               {/* Claim Button for Donations - Only for authenticated users */}
-              {isLoggedIn && isDonation && (
+              {isLoggedIn && isDonation && !isOwnAlert && (
                 <>
                   {alert.claimed ? (
                     <div className="text-xs">
@@ -364,9 +379,9 @@ const AlertModal = ({ alert, onClose, position, onGetDirections, isLoggedIn }) =
         </motion.div>
       </div>
 
-      {/* Pointer arrow */}
+      {/* Pointer arrow - only on desktop */}
       <div
-        className="absolute left-1/2 transform -translate-x-1/2"
+        className="absolute left-1/2 transform -translate-x-1/2 hidden md:block"
         style={{ bottom: '-8px' }}
       >
         <div

@@ -48,3 +48,16 @@ body {
     opacity: 0.7;
   }
 }
+/* Auth Banner Positioning */
+.auth-banner-position {
+  left: 50%;
+  transform: translateX(-50%);
+  transition: transform 0.3s ease;
+}
+
+/* On desktop (sm and up), apply panel offset */
+@media (min-width: 640px) {
+  .auth-banner-position {
+    transform: translateX(calc(-50% - var(--panel-expanded, 0) * 190px));
+  }
+}

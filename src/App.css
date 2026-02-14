@@ -1,1 +1,59 @@
 /* Minimal App styles - most styling is done with Tailwind */
+
+/* Hide map attribution/watermark */
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-logo,
+.mapboxgl-ctrl-attrib,
+.mapboxgl-ctrl-logo,
+.maplibregl-ctrl-attrib-button,
+.mapboxgl-ctrl-attrib-button,
+.maplibregl-ctrl-bottom-left,
+.mapboxgl-ctrl-bottom-left,
+.maplibregl-ctrl-bottom-right,
+.mapboxgl-ctrl-bottom-right,
+.maplibregl-compact,
+.mapboxgl-compact {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Hide attribution in all possible containers */
+.maplibregl-ctrl-attrib-inner,
+.mapboxgl-ctrl-attrib-inner,
+a[href*="maplibre"],
+a[href*="mapbox"],
+a[href*="openstreetmap"] {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Custom styling for My Location popup */
+.my-location-popup .maplibregl-popup-content,
+.my-location-popup .mapboxgl-popup-content {
+  padding: 0;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: none;
+}
+
+.my-location-popup .maplibregl-popup-close-button,
+.my-location-popup .mapboxgl-popup-close-button {
+  font-size: 18px;
+  padding: 4px 8px;
+  color: #6b7280;
+  right: 4px;
+  top: 4px;
+}
+
+.my-location-popup .maplibregl-popup-close-button:hover,
+.my-location-popup .mapboxgl-popup-close-button:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.my-location-popup .maplibregl-popup-tip,
+.my-location-popup .mapboxgl-popup-tip {
+  border-top-color: white;
+}

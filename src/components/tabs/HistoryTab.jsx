@@ -7,13 +7,14 @@ import { database } from '../../config/firebase';
 const HistoryTab = () => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     try {
       const historyRef = ref(database, 'history');
       const historyQuery = query(historyRef, orderByChild('timestamp'), limitToLast(50));
       
-      onValue(historyQuery, (snapshot) => {
+      const unsubscribe = onValue(historyQuery, (snapshot) => {
         const data = snapshot.val();
         if (data) {
           const historyArray = Object.entries(data).map(([id, entry]) => ({
@@ -27,9 +28,16 @@ const HistoryTab = () => {
           setHistory([]);
         }
         setLoading(false);
+      }, (error) => {
+        console.error('Error loading history:', error);
+        setError(error.message);
+        setLoading(false);
       });
+
+      return () => unsubscribe();
     } catch (error) {
-      console.error('Error loading history:', error);
+      console.error('Error setting up history listener:', error);
+      setError(error.message);
       setLoading(false);
     }
   }, []);
@@ -71,7 +79,32 @@ const HistoryTab = () => {
   const getActionText = (entry) => {
     switch (entry.action) {
       case 'request_created':
-        return `${entry.userName || 'Someone'} created a ${entry.requestType || 'request'}`;
+        const requestType = entry.requestType || 'request';
+        let typeText = requestType;
+        
+        // Make emergency types more descriptive
+        switch (requestType) {
+          case 'medical':
+            typeText = 'medical emergency';
+            break;
+          case 'fire':
+            typeText = 'fire emergency';
+            break;
+          case 'rescue':
+            typeText = 'rescue request';
+            break;
+          case 'flood':
+            typeText = 'flood emergency';
+            break;
+          case 'donation':
+            typeText = 'donation request';
+            break;
+          case 'emergency':
+            typeText = 'emergency alert';
+            break;
+        }
+        
+        return `${entry.userName || 'Someone'} created a ${typeText}`;
       case 'request_claimed':
         return `${entry.donorName || 'Someone'} claimed a donation request`;
       case 'request_fulfilled':
@@ -101,6 +134,15 @@ const HistoryTab = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="text-red-500 text-sm mb-2">Error loading history</div>
+        <div className="text-gray-400 text-xs">{error}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-4">
@@ -121,9 +163,18 @@ const HistoryTab = () => {
               className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <div className="flex items-start gap-3">
-                <div className={`mt-0.5 ${getActionColor(entry.action)}`}>
-                  <FontAwesomeIcon icon={getActionIcon(entry.action)} size="sm" />
-                </div>
+                {/* Profile Photo or Icon */}
+                {entry.userPhotoURL ? (
+                  <img 
+                    src={entry.userPhotoURL} 
+                    alt={entry.userName || 'User'} 
+                    className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
+                    <FontAwesomeIcon icon={getActionIcon(entry.action)} className="text-white text-xs" />
+                  </div>
+                )}
                 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-900">

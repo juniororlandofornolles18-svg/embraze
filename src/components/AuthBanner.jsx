@@ -1,16 +1,25 @@
+import { motion } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes } from '@fortawesome/free-solid-svg-icons';
 
 const AuthBanner = ({ onLogin, onDismiss }) => {
   return (
-    <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 w-auto">
-      <div className="bg-white/95 backdrop-blur-md shadow-xl rounded-full px-6 py-3 flex items-center gap-4 border border-gray-200">
-        <p className="text-sm text-gray-700">Sign in to sync your activity</p>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+      className="hidden sm:block absolute top-4 z-50 px-4 auth-banner-position"
+    >
+      <div className="bg-white/95 backdrop-blur-md shadow-xl rounded-full px-4 sm:px-6 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-4 border border-gray-200">
+        <p className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">
+          Sign in to sync your activity
+        </p>
         
         {/* Google Sign In */}
         <button
           onClick={onLogin}
-          className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-1.5 rounded-full text-sm font-medium transition-all hover:shadow-md flex items-center gap-2"
+          className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all hover:shadow-md flex items-center gap-1.5 sm:gap-2 flex-shrink-0"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -18,18 +27,18 @@ const AuthBanner = ({ onLogin, onDismiss }) => {
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
           </svg>
-          Google
+          <span className="hidden sm:inline">Google</span>
         </button>
 
         {/* Dismiss button */}
         <button
           onClick={onDismiss}
-          className="w-6 h-6 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors text-gray-400 hover:text-gray-600"
+          className="w-5 h-5 sm:w-6 sm:h-6 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors text-gray-400 hover:text-gray-600 flex-shrink-0"
         >
-          <FontAwesomeIcon icon={faTimes} size="sm" />
+          <FontAwesomeIcon icon={faTimes} className="text-xs sm:text-sm" />
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

@@ -6,50 +6,50 @@ const NavigationPanel = ({ route, destination, onClose }) => {
   if (!route) return null;
 
   return (
-    <div className="absolute top-4 left-4 z-40 bg-white rounded-xl shadow-2xl w-72 max-h-[80vh] overflow-hidden flex flex-col">
+    <div className="absolute top-4 left-4 z-40 bg-white rounded-xl shadow-2xl w-64 sm:w-72 max-h-[70vh] sm:max-h-[80vh] overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="bg-green-500 text-white px-3 py-2 flex items-center justify-between">
+      <div className="bg-green-500 text-white px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between">
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-xs">Navigation</h3>
-          <p className="text-xs opacity-90 truncate">{destination?.name || 'Destination'}</p>
+          <h3 className="font-semibold text-[10px] sm:text-xs">Navigation</h3>
+          <p className="text-[10px] sm:text-xs opacity-90 truncate">{destination?.name || 'Destination'}</p>
         </div>
         <button
           onClick={onClose}
-          className="w-6 h-6 rounded-full hover:bg-green-600 flex items-center justify-center transition-colors ml-2 flex-shrink-0"
+          className="w-5 h-5 sm:w-6 sm:h-6 rounded-full hover:bg-green-600 flex items-center justify-center transition-colors ml-1 sm:ml-2 flex-shrink-0"
         >
           <FontAwesomeIcon icon={faTimes} size="xs" />
         </button>
       </div>
 
       {/* Route Summary */}
-      <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-around">
+      <div className="px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-around">
         <div className="text-center">
-          <FontAwesomeIcon icon={faRoad} className="text-blue-500 text-xs mb-0.5" />
-          <p className="text-xs text-gray-900 font-semibold">{formatDistance(route.distance)}</p>
+          <FontAwesomeIcon icon={faRoad} className="text-blue-500 text-[10px] sm:text-xs mb-0.5" />
+          <p className="text-[10px] sm:text-xs text-gray-900 font-semibold">{formatDistance(route.distance)}</p>
         </div>
-        <div className="w-px h-6 bg-gray-300"></div>
+        <div className="w-px h-4 sm:h-6 bg-gray-300"></div>
         <div className="text-center">
-          <FontAwesomeIcon icon={faClock} className="text-blue-500 text-xs mb-0.5" />
-          <p className="text-xs text-gray-900 font-semibold">{formatDuration(route.duration)}</p>
+          <FontAwesomeIcon icon={faClock} className="text-blue-500 text-[10px] sm:text-xs mb-0.5" />
+          <p className="text-[10px] sm:text-xs text-gray-900 font-semibold">{formatDuration(route.duration)}</p>
         </div>
       </div>
 
       {/* Turn-by-turn Instructions */}
       <div className="flex-1 overflow-y-auto">
-        <div className="p-2 space-y-1.5">
+        <div className="p-1.5 sm:p-2 space-y-1 sm:space-y-1.5">
           {route.steps.map((step, index) => (
             <div
               key={index}
-              className="flex items-start gap-2 p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-start gap-1.5 sm:gap-2 p-1.5 sm:p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <FontAwesomeIcon icon={faLocationArrow} className="text-blue-600" style={{ fontSize: '10px' }} />
+              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <FontAwesomeIcon icon={faLocationArrow} className="text-blue-600" style={{ fontSize: '8px' }} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-900 font-medium leading-tight mb-0.5">
+                <p className="text-[10px] sm:text-xs text-gray-900 font-medium leading-tight mb-0.5">
                   {step.instruction}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-[10px] sm:text-xs text-gray-500">
                   {formatDistance(step.distance)}
                 </p>
               </div>
@@ -59,10 +59,10 @@ const NavigationPanel = ({ route, destination, onClose }) => {
       </div>
 
       {/* Cancel Button */}
-      <div className="p-2 border-t border-gray-200">
+      <div className="p-1.5 sm:p-2 border-t border-gray-200">
         <button
           onClick={onClose}
-          className="w-full py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+          className="w-full py-1.5 sm:py-2 text-[10px] sm:text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
         >
           Cancel Navigation
         </button>

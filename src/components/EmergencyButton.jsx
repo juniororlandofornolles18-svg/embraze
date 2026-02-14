@@ -6,7 +6,7 @@ import { ref, push, set, update } from 'firebase/database';
 import { database } from '../config/firebase';
 import { logActivity } from '../utils/activityLogger';
 
-const EmergencyButton = () => {
+const EmergencyButton = ({ currentUser }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -77,8 +77,11 @@ const EmergencyButton = () => {
           const newAlertRef = push(alertRef);
           
           const alertData = {
-            name: 'Anonymous',
-            contact: 'Not provided',
+            name: currentUser?.displayName || 'Anonymous',
+            contact: currentUser?.phoneNumber || 'Not provided',
+            email: currentUser?.email || '',
+            photoURL: currentUser?.photoURL || '',
+            userId: currentUser?.uid || null,
             address: address,
             latitude: latitude,
             longitude: longitude,
@@ -127,6 +130,7 @@ const EmergencyButton = () => {
           await logActivity('request_created', {
             alertId: newAlertRef.key,
             userName: alertData.name,
+            userPhotoURL: alertData.photoURL,
             requestType: type,
             location: address,
             latitude: latitude,
@@ -196,7 +200,13 @@ const EmergencyButton = () => {
 
   return (
     <>
-      <div className="fixed bottom-8 left-1/2 z-50" style={{ transform: 'translateX(-50%)' }}>
+      <div 
+        className="fixed bottom-8 z-50 transition-all duration-300" 
+        style={{ 
+          left: '50%',
+          transform: 'translateX(calc(-50% - var(--panel-expanded, 0) * 190px))'
+        }}
+      >
         {/* Radial Menu for Emergency Types */}
         <AnimatePresence>
           {showRadialMenu && (

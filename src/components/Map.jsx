@@ -3,15 +3,20 @@ import { Map, Marker } from 'react-map-gl';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHandPaper, faHeart, faTruckMedical, faFireFlameCurved, faPersonCircleExclamation, faHouseFloodWater, faLocationArrow } from '@fortawesome/free-solid-svg-icons';
+import { faHandPaper, faHeart, faTruckMedical, faFireFlameCurved, faPersonCircleExclamation, faHouseFloodWater, faLocationArrow, faLocationCrosshairs } from '@fortawesome/free-solid-svg-icons';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../config/firebase';
 import { CEBU_CITY_CENTER } from '../config/mapbox';
+import lottie from 'lottie-web';
+import embrazeLogoData from '../assets/embraze-logo.json';
 
 const MapView = ({ onMarkerClick, flyToLocation, route, userLocation }) => {
   const [alerts, setAlerts] = useState({});
   const [error, setError] = useState(null);
+  const [locating, setLocating] = useState(false);
+  const [myLocationMarker, setMyLocationMarker] = useState(null);
   const mapRef = useRef(null);
+  const logoRef = useRef(null);
   const [viewState, setViewState] = useState({
     longitude: CEBU_CITY_CENTER.longitude,
     latitude: CEBU_CITY_CENTER.latitude,
@@ -19,6 +24,101 @@ const MapView = ({ onMarkerClick, flyToLocation, route, userLocation }) => {
     pitch: 60, // Camera tilt angle (0-85 degrees)
     bearing: 0
   });
+
+  // Load Embraze logo animation
+  useEffect(() => {
+    if (!logoRef.current) return;
+
+    const animation = lottie.loadAnimation({
+      container: logoRef.current,
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      animationData: embrazeLogoData
+    });
+
+    // Remove white background from SVG after it loads
+    animation.addEventListener('DOMLoaded', () => {
+      const svg = logoRef.current.querySelector('svg');
+      if (svg) {
+        // Find and remove any white background rectangles
+        const rects = svg.querySelectorAll('rect, path');
+        rects.forEach(rect => {
+          const fill = rect.getAttribute('fill');
+          const style = window.getComputedStyle(rect);
+          const computedFill = style.fill;
+          
+          // Remove white fills (rgb(255, 255, 255) or #ffffff or white)
+          if (fill === '#ffffff' || fill === 'white' || fill === 'rgb(255, 255, 255)' ||
+              computedFill === 'rgb(255, 255, 255)') {
+            rect.style.fill = 'transparent';
+          }
+        });
+      }
+    });
+
+    return () => {
+      animation.destroy();
+    };
+  }, []);
+
+  const handleFindMyLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser');
+      return;
+    }
+
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { longitude, latitude } = position.coords;
+        
+        // Set the marker at user's location
+        setMyLocationMarker({ longitude, latitude });
+        
+        if (mapRef.current) {
+          const map = mapRef.current.getMap();
+          map.flyTo({
+            center: [longitude, latitude],
+            zoom: 16,
+            pitch: 60,
+            duration: 2000,
+            essential: true
+          });
+        }
+        
+        setLocating(false);
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        
+        // Provide specific error messages based on error code
+        let errorMessage = 'Unable to get your location.';
+        
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information is unavailable. Please try again.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out. Please try again.';
+            break;
+          default:
+            errorMessage = 'An unknown error occurred while getting your location.';
+        }
+        
+        alert(errorMessage);
+        setLocating(false);
+      },
+      {
+        enableHighAccuracy: false, // Use false for faster response
+        timeout: 10000, // Increase timeout to 10 seconds
+        maximumAge: 30000 // Allow cached position up to 30 seconds old
+      }
+    );
+  };
 
   // Handle flying to a specific location
   useEffect(() => {
@@ -141,6 +241,48 @@ const MapView = ({ onMarkerClick, flyToLocation, route, userLocation }) => {
 
   return (
     <div className="relative w-full h-full">
+      {/* Embraze Logo - Top Left */}
+      <div className="absolute -top-8 left-4 z-10">
+        <div ref={logoRef} className="w-32 h-32 sm:w-40 sm:h-40"></div>
+      </div>
+
+      {/* Find My Location Button - Mobile */}
+      <button
+        onClick={handleFindMyLocation}
+        disabled={locating}
+        className="sm:hidden fixed right-4 w-14 h-14 bg-white text-gray-700 rounded-full shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+        style={{
+          bottom: 'calc(5rem + 3.5rem + 3.5rem + 1rem)', // Above history button with more gap: 80px + 56px + 56px + 16px
+          zIndex: 45
+        }}
+        title="Find my location"
+      >
+        {locating ? (
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+        ) : (
+          <FontAwesomeIcon icon={faLocationCrosshairs} size="lg" />
+        )}
+      </button>
+
+      {/* Desktop Find My Location Button */}
+      <button
+        onClick={handleFindMyLocation}
+        disabled={locating}
+        className="hidden sm:block absolute bottom-8 z-[100] bg-white text-gray-700 p-3 rounded-full shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{
+          right: 'calc(64px + 2rem)',
+          transform: 'translateX(calc(var(--panel-expanded, 0) * -380px))',
+          transition: 'transform 0.3s ease'
+        }}
+        title="Find my location"
+      >
+        {locating ? (
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+        ) : (
+          <FontAwesomeIcon icon={faLocationCrosshairs} className="text-lg" />
+        )}
+      </button>
+
       <Map
         ref={mapRef}
         {...viewState}
@@ -148,6 +290,7 @@ const MapView = ({ onMarkerClick, flyToLocation, route, userLocation }) => {
         mapLib={import('maplibre-gl')}
         mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
         style={{ width: '100%', height: '100%' }}
+        attributionControl={false}
       >
         {/* User Location Marker */}
         {userLocation && (
@@ -169,8 +312,55 @@ const MapView = ({ onMarkerClick, flyToLocation, route, userLocation }) => {
           </Marker>
         )}
 
+        {/* My Location Marker (from Find My Location button) */}
+        {myLocationMarker && (
+          <Marker
+            longitude={myLocationMarker.longitude}
+            latitude={myLocationMarker.latitude}
+            anchor="center"
+          >
+            <div className="relative" style={{ width: '40px', height: '40px' }}>
+              {/* Outer light blue circle */}
+              <div 
+                className="absolute rounded-full bg-blue-400/25"
+                style={{ 
+                  width: '40px', 
+                  height: '40px',
+                  top: '0',
+                  left: '0'
+                }} 
+              />
+              
+              {/* Inner blue dot */}
+              <div 
+                className="absolute rounded-full bg-blue-500 border-2 border-white shadow-md"
+                style={{ 
+                  width: '16px', 
+                  height: '16px',
+                  top: '12px',
+                  left: '12px'
+                }}
+              />
+            </div>
+          </Marker>
+        )}
+
         {/* Alert Markers */}
         {Object.entries(alerts).map(([id, alert]) => {
+          // Validate coordinates before rendering
+          const hasValidCoordinates = 
+            alert.longitude != null && 
+            alert.latitude != null && 
+            !isNaN(alert.longitude) && 
+            !isNaN(alert.latitude) &&
+            isFinite(alert.longitude) &&
+            isFinite(alert.latitude);
+          
+          if (!hasValidCoordinates) {
+            console.warn(`Alert ${id} has invalid coordinates:`, alert.longitude, alert.latitude);
+            return null;
+          }
+          
           const isDonation = alert.type === 'donation';
           const isClaimed = isDonation && alert.claimed;
           const boostCount = alert.boosts || 0;
